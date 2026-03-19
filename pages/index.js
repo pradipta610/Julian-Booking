@@ -8,8 +8,14 @@ const SESSION_TYPES = [
   'Baby Milestone / Nyambutin',
 ];
 
+const SERVICE_AREAS = [
+  { value: 'bali', label: 'Bali, Indonesia', timezone: 'Asia/Makassar', phoneHint: '+62 8XX XXXX XXXX' },
+  { value: 'sydney', label: 'Sydney, Australia', timezone: 'Australia/Sydney', phoneHint: '+61 4XX XXX XXX' },
+];
+
 export default function BookingPage() {
   const [form, setForm] = useState({
+    serviceArea: '',
     fullName: '',
     whatsapp: '',
     email: '',
@@ -20,6 +26,8 @@ export default function BookingPage() {
     notes: '',
   });
 
+  const selectedArea = SERVICE_AREAS.find((a) => a.value === form.serviceArea);
+
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [successData, setSuccessData] = useState(null);
@@ -28,13 +36,13 @@ export default function BookingPage() {
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [slotsError, setSlotsError] = useState('');
 
-  const fetchAvailability = useCallback(async (date) => {
-    if (!date) return;
+  const fetchAvailability = useCallback(async (date, timezone) => {
+    if (!date || !timezone) return;
     setSlotsLoading(true);
     setSlotsError('');
     setTimeSlots([]);
     try {
-      const res = await fetch(`/api/availability?date=${date}`);
+      const res = await fetch(`/api/availability?date=${date}&timezone=${encodeURIComponent(timezone)}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setTimeSlots(data.slots);
@@ -51,9 +59,16 @@ export default function BookingPage() {
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: '' }));
     }
+    if (name === 'serviceArea') {
+      setForm((prev) => ({ ...prev, sessionDate: '', sessionTime: '' }));
+      setTimeSlots([]);
+    }
     if (name === 'sessionDate') {
+      const area = name === 'sessionDate'
+        ? SERVICE_AREAS.find((a) => a.value === form.serviceArea)
+        : selectedArea;
       setForm((prev) => ({ ...prev, sessionTime: '' }));
-      fetchAvailability(value);
+      if (area) fetchAvailability(value, area.timezone);
     }
   }
 
@@ -66,6 +81,7 @@ export default function BookingPage() {
 
   function validate() {
     const newErrors = {};
+    if (!form.serviceArea) newErrors.serviceArea = 'Please select a service area';
     if (!form.fullName.trim()) newErrors.fullName = 'Full name is required';
     if (!form.whatsapp.trim()) newErrors.whatsapp = 'WhatsApp number is required';
     if (!form.email.trim()) {
@@ -98,7 +114,10 @@ export default function BookingPage() {
       const res = await fetch('/api/booking', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          timezone: selectedArea?.timezone,
+        }),
       });
 
       const data = await res.json();
@@ -109,6 +128,7 @@ export default function BookingPage() {
 
       setSuccessData({ ...form });
       setForm({
+        serviceArea: '',
         fullName: '',
         whatsapp: '',
         email: '',
@@ -162,7 +182,7 @@ export default function BookingPage() {
         {/* Hero */}
         <header className="hero-section">
           <h1 className="brand-name">Julian Photography</h1>
-          <p className="brand-tagline">Wedding &amp; Portrait Photography — Sydney</p>
+          <p className="brand-tagline">Wedding &amp; Portrait Photography — Bali &amp; Sydney</p>
           <div className="divider">
             <span className="divider-line"></span>
             <span className="divider-diamond"></span>
@@ -177,6 +197,28 @@ export default function BookingPage() {
         {/* Form */}
         <main className="form-container">
           <form className="booking-form" onSubmit={handleSubmit} noValidate>
+            {/* Service Area */}
+            <div className="form-group">
+              <label className="form-label" htmlFor="serviceArea">
+                Service Area <span className="required">*</span>
+              </label>
+              <select
+                id="serviceArea"
+                name="serviceArea"
+                className={`form-select${errors.serviceArea ? ' error' : ''}`}
+                value={form.serviceArea}
+                onChange={handleChange}
+              >
+                <option value="" disabled>Where is your session?</option>
+                {SERVICE_AREAS.map((area) => (
+                  <option key={area.value} value={area.value}>{area.label}</option>
+                ))}
+              </select>
+              <span className={`error-text${errors.serviceArea ? ' visible' : ''}`}>
+                {errors.serviceArea}
+              </span>
+            </div>
+
             {/* Full Name */}
             <div className="form-group">
               <label className="form-label" htmlFor="fullName">
@@ -207,7 +249,7 @@ export default function BookingPage() {
                   name="whatsapp"
                   type="tel"
                   className={`form-input${errors.whatsapp ? ' error' : ''}`}
-                  placeholder="+61 4XX XXX XXX"
+                  placeholder={selectedArea?.phoneHint || '+62 / +61'}
                   value={form.whatsapp}
                   onChange={handleChange}
                 />
@@ -331,7 +373,7 @@ export default function BookingPage() {
                 name="location"
                 type="text"
                 className={`form-input${errors.location ? ' error' : ''}`}
-                placeholder="e.g. Sydney Botanic Gardens"
+                placeholder={form.serviceArea === 'bali' ? 'e.g. Ubud, Tanah Lot, Seminyak' : 'e.g. Sydney Botanic Gardens'}
                 value={form.location}
                 onChange={handleChange}
               />
@@ -391,6 +433,10 @@ export default function BookingPage() {
             <p>Thank you, {successData.fullName}. We&apos;ll confirm your session shortly.</p>
             <table className="summary-table">
               <tbody>
+                <tr>
+                  <td>Area</td>
+                  <td>{SERVICE_AREAS.find((a) => a.value === successData.serviceArea)?.label}</td>
+                </tr>
                 <tr>
                   <td>Session</td>
                   <td>{successData.sessionType}</td>

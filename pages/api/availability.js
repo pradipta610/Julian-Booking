@@ -1,7 +1,7 @@
 import { google } from 'googleapis';
 import { getGoogleAuth } from '../../lib/google-auth';
 
-const TIMEZONE = 'Australia/Sydney';
+const ALLOWED_TIMEZONES = ['Asia/Makassar', 'Australia/Sydney'];
 
 /**
  * Convert a date string + time string to a Date object in the target timezone.
@@ -48,11 +48,13 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { date } = req.query;
+  const { date, timezone } = req.query;
 
   if (!date) {
     return res.status(400).json({ error: 'Date parameter is required (YYYY-MM-DD)' });
   }
+
+  const tz = ALLOWED_TIMEZONES.includes(timezone) ? timezone : 'Asia/Makassar';
 
   try {
     const auth = getGoogleAuth(['https://www.googleapis.com/auth/calendar.readonly']);
@@ -60,32 +62,35 @@ export default async function handler(req, res) {
     const calendar = google.calendar({ version: 'v3', auth });
 
     // Build proper timezone-aware boundaries for the full day
-    const dayStartMs = toDateInTimezone(date, '00:00', TIMEZONE);
-    const dayEndMs = toDateInTimezone(date, '23:59', TIMEZONE);
+    const dayStartMs = toDateInTimezone(date, '00:00', tz);
+    const dayEndMs = toDateInTimezone(date, '23:59', tz);
 
     const freeBusyResponse = await calendar.freebusy.query({
       requestBody: {
         timeMin: new Date(dayStartMs).toISOString(),
         timeMax: new Date(dayEndMs).toISOString(),
-        timeZone: TIMEZONE,
+        timeZone: tz,
         items: [{ id: process.env.GOOGLE_CALENDAR_ID }],
       },
     });
 
     const busySlots = freeBusyResponse.data.calendars?.[process.env.GOOGLE_CALENDAR_ID]?.busy || [];
 
-    // Get current time in Sydney to disable past slots
-    const nowSyd = getNowInTimezone(TIMEZONE);
-    const isToday = date === nowSyd.dateStr;
+    // Get current time in the selected timezone to disable past slots
+    const nowLocal = getNowInTimezone(tz);
+    const isToday = date === nowLocal.dateStr;
 
-    // Generate 1-hour time slots from 07:00 to 19:00
+    // Generate time slots from 9:00 AM to 6:00 PM
+    // Last bookable slot is 4:00 PM (4PM + 2hr session = 6PM)
+    const FIRST_HOUR = 9;
+    const LAST_HOUR = 16;
     const slots = [];
-    for (let hour = 7; hour <= 19; hour++) {
+    for (let hour = FIRST_HOUR; hour <= LAST_HOUR; hour++) {
       const slotStartStr = `${String(hour).padStart(2, '0')}:00`;
       const slotEndStr = `${String(hour + 2).padStart(2, '0')}:00`; // 2-hour session
 
-      const slotStartMs = toDateInTimezone(date, slotStartStr, TIMEZONE);
-      const slotEndMs = toDateInTimezone(date, slotEndStr, TIMEZONE);
+      const slotStartMs = toDateInTimezone(date, slotStartStr, tz);
+      const slotEndMs = toDateInTimezone(date, slotEndStr, tz);
 
       // Check if this 2-hour block overlaps with any busy period
       const isBusy = busySlots.some((busy) => {
@@ -95,7 +100,7 @@ export default async function handler(req, res) {
       });
 
       // Check if slot is in the past (for today)
-      const isPast = isToday && hour <= nowSyd.hour;
+      const isPast = isToday && hour <= nowLocal.hour;
 
       slots.push({
         time: slotStartStr,
