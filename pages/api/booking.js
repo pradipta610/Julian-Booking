@@ -1,4 +1,5 @@
 import { google } from 'googleapis';
+import { getGoogleAuth } from '../../lib/google-auth';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -51,12 +52,7 @@ export default async function handler(req, res) {
   };
 
   try {
-    const auth = new google.auth.JWT(
-      process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      null,
-      process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      ['https://www.googleapis.com/auth/calendar.events']
-    );
+    const auth = getGoogleAuth(['https://www.googleapis.com/auth/calendar.events']);
 
     const calendar = google.calendar({ version: 'v3', auth });
 

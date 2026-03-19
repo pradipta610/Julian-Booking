@@ -1,4 +1,5 @@
 import { google } from 'googleapis';
+import { getGoogleAuth } from '../../lib/google-auth';
 
 const TIMEZONE = 'Australia/Sydney';
 
@@ -54,12 +55,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const auth = new google.auth.JWT(
-      process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      null,
-      process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      ['https://www.googleapis.com/auth/calendar.readonly']
-    );
+    const auth = getGoogleAuth(['https://www.googleapis.com/auth/calendar.readonly']);
 
     const calendar = google.calendar({ version: 'v3', auth });
 
@@ -114,14 +110,6 @@ export default async function handler(req, res) {
     console.error('Availability API error:', error?.message || error);
     return res.status(500).json({
       error: 'Failed to fetch availability. Please try again.',
-      debug: {
-        message: error?.message,
-        hasEmail: !!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-        hasKey: !!process.env.GOOGLE_PRIVATE_KEY,
-        keyLength: process.env.GOOGLE_PRIVATE_KEY?.length || 0,
-        hasCalendarId: !!process.env.GOOGLE_CALENDAR_ID,
-        calendarId: process.env.GOOGLE_CALENDAR_ID,
-      },
     });
   }
 }
