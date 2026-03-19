@@ -114,6 +114,14 @@ export default async function handler(req, res) {
     console.error('Availability API error:', error?.message || error);
     return res.status(500).json({
       error: 'Failed to fetch availability. Please try again.',
+      debug: {
+        message: error?.message,
+        hasEmail: !!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+        hasKey: !!process.env.GOOGLE_PRIVATE_KEY,
+        keyLength: process.env.GOOGLE_PRIVATE_KEY?.length || 0,
+        hasCalendarId: !!process.env.GOOGLE_CALENDAR_ID,
+        calendarId: process.env.GOOGLE_CALENDAR_ID,
+      },
     });
   }
 }
