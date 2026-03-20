@@ -1,12 +1,24 @@
 import Head from 'next/head';
 import { useState, useCallback } from 'react';
 
-const SESSION_TYPES = [
-  'Wedding',
-  'Prewedding',
-  'Portrait',
-  'Baby Milestone / Nyambutin',
-];
+const SESSION_TYPES_BY_AREA = {
+  bali: ['Wedding', 'Prewedding', 'Portrait', 'Baby Milestone / Nyambutin'],
+  sydney: ['Wedding', 'Prewedding', 'Portrait'],
+};
+
+const LOCATION_OPTIONS_BY_AREA = {
+  bali: [
+    'Studio (Jembrana)',
+    'Outdoor - Jembrana area',
+    'Other',
+  ],
+  sydney: [
+    'Outdoor - Sydney CBD',
+    'Outdoor - Eastern Suburbs',
+    'Outdoor - Northern Beaches',
+    'Other',
+  ],
+};
 
 const SERVICE_AREAS = [
   { value: 'bali', label: 'Bali, Indonesia', timezone: 'Asia/Makassar', phoneHint: '+62 8XX XXXX XXXX' },
@@ -23,6 +35,7 @@ export default function BookingPage() {
     sessionDate: '',
     sessionTime: '',
     location: '',
+    locationCustom: '',
     notes: '',
   });
 
@@ -36,13 +49,13 @@ export default function BookingPage() {
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [slotsError, setSlotsError] = useState('');
 
-  const fetchAvailability = useCallback(async (date, timezone) => {
-    if (!date || !timezone) return;
+  const fetchAvailability = useCallback(async (date, timezone, serviceArea) => {
+    if (!date || !timezone || !serviceArea) return;
     setSlotsLoading(true);
     setSlotsError('');
     setTimeSlots([]);
     try {
-      const res = await fetch(`/api/availability?date=${date}&timezone=${encodeURIComponent(timezone)}`);
+      const res = await fetch(`/api/availability?date=${date}&timezone=${encodeURIComponent(timezone)}&service_area=${encodeURIComponent(serviceArea)}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setTimeSlots(data.slots);
@@ -60,7 +73,7 @@ export default function BookingPage() {
       setErrors((prev) => ({ ...prev, [name]: '' }));
     }
     if (name === 'serviceArea') {
-      setForm((prev) => ({ ...prev, sessionDate: '', sessionTime: '' }));
+      setForm((prev) => ({ ...prev, sessionType: '', sessionDate: '', sessionTime: '', location: '', locationCustom: '' }));
       setTimeSlots([]);
     }
     if (name === 'sessionDate') {
@@ -68,7 +81,7 @@ export default function BookingPage() {
         ? SERVICE_AREAS.find((a) => a.value === form.serviceArea)
         : selectedArea;
       setForm((prev) => ({ ...prev, sessionTime: '' }));
-      if (area) fetchAvailability(value, area.timezone);
+      if (area) fetchAvailability(value, area.timezone, area.value);
     }
   }
 
@@ -92,7 +105,8 @@ export default function BookingPage() {
     if (!form.sessionType) newErrors.sessionType = 'Please select a session type';
     if (!form.sessionDate) newErrors.sessionDate = 'Session date is required';
     if (!form.sessionTime) newErrors.sessionTime = 'Session time is required';
-    if (!form.location.trim()) newErrors.location = 'Location is required';
+    const resolvedLocation = form.location === 'Other' ? form.locationCustom.trim() : form.location;
+    if (!resolvedLocation) newErrors.location = 'Location is required';
     return newErrors;
   }
 
@@ -111,11 +125,20 @@ export default function BookingPage() {
 
     setLoading(true);
     try {
+      const resolvedLocation = form.location === 'Other' ? form.locationCustom.trim() : form.location;
       const res = await fetch('/api/booking', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...form,
+          serviceArea: form.serviceArea,
+          fullName: form.fullName,
+          whatsapp: form.whatsapp,
+          email: form.email,
+          sessionType: form.sessionType,
+          sessionDate: form.sessionDate,
+          sessionTime: form.sessionTime,
+          location: resolvedLocation,
+          notes: form.notes,
           timezone: selectedArea?.timezone,
         }),
       });
@@ -126,7 +149,8 @@ export default function BookingPage() {
         throw new Error(data.error || 'Something went wrong. Please try again.');
       }
 
-      setSuccessData({ ...form });
+      const resolvedLoc = form.location === 'Other' ? form.locationCustom.trim() : form.location;
+      setSuccessData({ ...form, location: resolvedLoc });
       setForm({
         serviceArea: '',
         fullName: '',
@@ -136,6 +160,7 @@ export default function BookingPage() {
         sessionDate: '',
         sessionTime: '',
         location: '',
+        locationCustom: '',
         notes: '',
       });
       setTimeSlots([]);
@@ -287,12 +312,16 @@ export default function BookingPage() {
                 className={`form-select${errors.sessionType ? ' error' : ''}`}
                 value={form.sessionType}
                 onChange={handleChange}
+                disabled={!form.serviceArea}
               >
                 <option value="" disabled>Select a session type</option>
-                {SESSION_TYPES.map((type) => (
+                {(SESSION_TYPES_BY_AREA[form.serviceArea] || []).map((type) => (
                   <option key={type} value={type}>{type}</option>
                 ))}
               </select>
+              {!form.serviceArea && (
+                <span className="hint-text">Please select a service area first</span>
+              )}
               <span className={`error-text${errors.sessionType ? ' visible' : ''}`}>
                 {errors.sessionType}
               </span>
@@ -368,15 +397,34 @@ export default function BookingPage() {
               <label className="form-label" htmlFor="location">
                 Location / Venue <span className="required">*</span>
               </label>
-              <input
+              <select
                 id="location"
                 name="location"
-                type="text"
-                className={`form-input${errors.location ? ' error' : ''}`}
-                placeholder={form.serviceArea === 'bali' ? 'e.g. Ubud, Tanah Lot, Seminyak' : 'e.g. Sydney Botanic Gardens'}
+                className={`form-select${errors.location ? ' error' : ''}`}
                 value={form.location}
                 onChange={handleChange}
-              />
+                disabled={!form.serviceArea}
+              >
+                <option value="" disabled>Select a location</option>
+                {(LOCATION_OPTIONS_BY_AREA[form.serviceArea] || []).map((loc) => (
+                  <option key={loc} value={loc}>{loc}</option>
+                ))}
+              </select>
+              {!form.serviceArea && (
+                <span className="hint-text">Please select a service area first</span>
+              )}
+              {form.location === 'Other' && (
+                <input
+                  id="locationCustom"
+                  name="locationCustom"
+                  type="text"
+                  className={`form-input${errors.location ? ' error' : ''}`}
+                  placeholder="Enter your preferred location..."
+                  value={form.locationCustom}
+                  onChange={handleChange}
+                  style={{ marginTop: 8 }}
+                />
+              )}
               <span className={`error-text${errors.location ? ' visible' : ''}`}>
                 {errors.location}
               </span>
@@ -429,8 +477,11 @@ export default function BookingPage() {
         {successData && (
           <div className="success-card">
             <div className="success-icon">&#10003;</div>
-            <h2>Booking Requested!</h2>
-            <p>Thank you, {successData.fullName}. We&apos;ll confirm your session shortly.</p>
+            <h2>Booking Received!</h2>
+            <p className="success-main-msg">Thank you, {successData.fullName}.</p>
+            <p className="success-whatsapp-msg">
+              Your booking has been received. Julian will contact you via WhatsApp within 24 hours to confirm payment and finalize your session.
+            </p>
             <table className="summary-table">
               <tbody>
                 <tr>

@@ -48,13 +48,22 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { date, timezone } = req.query;
+  const { date, timezone, service_area } = req.query;
 
   if (!date) {
     return res.status(400).json({ error: 'Date parameter is required (YYYY-MM-DD)' });
   }
 
   const tz = ALLOWED_TIMEZONES.includes(timezone) ? timezone : 'Asia/Makassar';
+
+  // Select calendar based on service area
+  const calendarId = service_area === 'sydney'
+    ? process.env.GOOGLE_CALENDAR_ID_SYDNEY
+    : process.env.GOOGLE_CALENDAR_ID_BALI;
+
+  if (!calendarId) {
+    return res.status(500).json({ error: 'Calendar not configured for this location.' });
+  }
 
   try {
     const auth = getGoogleAuth(['https://www.googleapis.com/auth/calendar.readonly']);
@@ -70,11 +79,11 @@ export default async function handler(req, res) {
         timeMin: new Date(dayStartMs).toISOString(),
         timeMax: new Date(dayEndMs).toISOString(),
         timeZone: tz,
-        items: [{ id: process.env.GOOGLE_CALENDAR_ID }],
+        items: [{ id: calendarId }],
       },
     });
 
-    const busySlots = freeBusyResponse.data.calendars?.[process.env.GOOGLE_CALENDAR_ID]?.busy || [];
+    const busySlots = freeBusyResponse.data.calendars?.[calendarId]?.busy || [];
 
     // Get current time in the selected timezone to disable past slots
     const nowLocal = getNowInTimezone(tz);
