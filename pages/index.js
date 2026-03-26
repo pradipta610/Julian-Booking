@@ -44,6 +44,8 @@ export default function BookingPage() {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [successData, setSuccessData] = useState(null);
+  const [paymentConfig, setPaymentConfig] = useState(null);
+  const [paymentSent, setPaymentSent] = useState(false);
   const [toast, setToast] = useState(null);
   const [timeSlots, setTimeSlots] = useState([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
@@ -151,6 +153,8 @@ export default function BookingPage() {
 
       const resolvedLoc = form.location === 'Other' ? form.locationCustom.trim() : form.location;
       setSuccessData({ ...form, location: resolvedLoc });
+      setPaymentConfig(data.paymentConfig || null);
+      setPaymentSent(false);
       setForm({
         serviceArea: '',
         fullName: '',
@@ -472,47 +476,156 @@ export default function BookingPage() {
         </div>
       )}
 
-      {/* Success Overlay */}
+      {/* Success / Payment Overlay */}
       <div className={`success-overlay${successData ? ' visible' : ''}`}>
         {successData && (
-          <div className="success-card">
-            <div className="success-icon">&#10003;</div>
-            <h2>Booking Received!</h2>
-            <p className="success-main-msg">Thank you, {successData.fullName}.</p>
-            <p className="success-whatsapp-msg">
-              Your booking has been received. Julian will contact you via WhatsApp within 24 hours to confirm payment and finalize your session.
-            </p>
-            <table className="summary-table">
-              <tbody>
-                <tr>
-                  <td>Area</td>
-                  <td>{SERVICE_AREAS.find((a) => a.value === successData.serviceArea)?.label}</td>
-                </tr>
-                <tr>
-                  <td>Session</td>
-                  <td>{successData.sessionType}</td>
-                </tr>
-                <tr>
-                  <td>Date</td>
-                  <td>{formatDate(successData.sessionDate)}</td>
-                </tr>
-                <tr>
-                  <td>Time</td>
-                  <td>{formatTime(successData.sessionTime)}</td>
-                </tr>
-                <tr>
-                  <td>Location</td>
-                  <td>{successData.location}</td>
-                </tr>
-                <tr>
-                  <td>Contact</td>
-                  <td>{successData.email}</td>
-                </tr>
-              </tbody>
-            </table>
-            <button className="btn-outline" onClick={() => setSuccessData(null)}>
-              Book Another Session
-            </button>
+          <div className="success-card payment-card">
+            {!paymentSent ? (
+              <>
+                <div className="success-icon">&#10003;</div>
+                <h2>Booking Received!</h2>
+                <p className="success-main-msg">Thank you, {successData.fullName}.</p>
+
+                {/* Booking Summary */}
+                <table className="summary-table">
+                  <tbody>
+                    <tr>
+                      <td>Area</td>
+                      <td>{SERVICE_AREAS.find((a) => a.value === successData.serviceArea)?.label}</td>
+                    </tr>
+                    <tr>
+                      <td>Session</td>
+                      <td>{successData.sessionType}</td>
+                    </tr>
+                    <tr>
+                      <td>Date</td>
+                      <td>{formatDate(successData.sessionDate)}</td>
+                    </tr>
+                    <tr>
+                      <td>Time</td>
+                      <td>{formatTime(successData.sessionTime)}</td>
+                    </tr>
+                    <tr>
+                      <td>Location</td>
+                      <td>{successData.location}</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                {/* Payment Details */}
+                {paymentConfig && (
+                  <div className="payment-section">
+                    <h3 className="payment-title">
+                      {paymentConfig.currency === 'IDR'
+                        ? 'Amankan Sesi Foto Anda'
+                        : 'Secure Your Session'}
+                    </h3>
+
+                    {paymentConfig.method === 'bank' ? (
+                      <div className="payment-details">
+                        <p className="payment-intro">
+                          Bayar DP sebesar <strong>Rp {Number(paymentConfig.amount).toLocaleString('id-ID')}</strong> ke rekening berikut:
+                        </p>
+                        <div className="payment-info-box">
+                          <div className="payment-row">
+                            <span className="payment-label">Bank</span>
+                            <span className="payment-value">{paymentConfig.bankName}</span>
+                          </div>
+                          <div className="payment-row">
+                            <span className="payment-label">No. Rekening</span>
+                            <span className="payment-value mono">{paymentConfig.accountNumber}</span>
+                          </div>
+                          <div className="payment-row">
+                            <span className="payment-label">Atas Nama</span>
+                            <span className="payment-value">{paymentConfig.accountName}</span>
+                          </div>
+                        </div>
+                        <p className="payment-instruction">
+                          Setelah transfer, kirim bukti pembayaran via WhatsApp ke{' '}
+                          <strong>{paymentConfig.whatsapp}</strong>
+                          <br />
+                          Julian akan mengkonfirmasi booking Anda dalam 1–2 jam.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="payment-details">
+                        <p className="payment-intro">
+                          Pay a <strong>AUD ${paymentConfig.amount}</strong> deposit:
+                        </p>
+                        <div className="payment-info-box">
+                          <div className="payment-row">
+                            <span className="payment-label">PayID</span>
+                            <span className="payment-value mono">{paymentConfig.payId}</span>
+                          </div>
+                          <div className="payment-row">
+                            <span className="payment-label">Name</span>
+                            <span className="payment-value">{paymentConfig.accountName}</span>
+                          </div>
+                        </div>
+                        <p className="payment-instruction">
+                          After payment, send proof via WhatsApp:{' '}
+                          <strong>{paymentConfig.whatsapp}</strong>
+                          <br />
+                          Julian will confirm your booking within 1–2 hours.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="payment-actions">
+                  <button
+                    className="btn-whatsapp"
+                    onClick={() => setPaymentSent(true)}
+                  >
+                    I&apos;ve Sent the Payment Proof via WhatsApp
+                  </button>
+                  <button className="btn-outline btn-small" onClick={() => { setSuccessData(null); setPaymentConfig(null); }}>
+                    Book Another Session
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="success-icon pending-icon">&#9203;</div>
+                <h2>Pending Payment Verification</h2>
+                <p className="success-main-msg">
+                  {successData.serviceArea === 'bali'
+                    ? 'Terima kasih! Bukti pembayaran Anda sedang diverifikasi.'
+                    : 'Thank you! Your payment proof is being verified.'}
+                </p>
+                <p className="success-whatsapp-msg">
+                  {successData.serviceArea === 'bali'
+                    ? 'Julian akan mengkonfirmasi booking Anda via WhatsApp dalam 1–2 jam.'
+                    : 'Julian will confirm your booking via WhatsApp within 1–2 hours.'}
+                </p>
+
+                <table className="summary-table">
+                  <tbody>
+                    <tr>
+                      <td>Status</td>
+                      <td><span className="status-badge pending">Pending Verification</span></td>
+                    </tr>
+                    <tr>
+                      <td>Session</td>
+                      <td>{successData.sessionType}</td>
+                    </tr>
+                    <tr>
+                      <td>Date</td>
+                      <td>{formatDate(successData.sessionDate)}</td>
+                    </tr>
+                    <tr>
+                      <td>Time</td>
+                      <td>{formatTime(successData.sessionTime)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <button className="btn-outline" onClick={() => { setSuccessData(null); setPaymentConfig(null); setPaymentSent(false); }}>
+                  Book Another Session
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>

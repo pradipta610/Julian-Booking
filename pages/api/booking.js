@@ -104,10 +104,31 @@ export default async function handler(req, res) {
       console.error('Email send error (non-fatal):', emailErr?.message || emailErr);
     }
 
+    // Build payment config from env vars based on service area
+    const paymentConfig = serviceArea === 'sydney'
+      ? {
+          method: 'payid',
+          payId: process.env.PAYID_JULIAN || '',
+          accountName: 'Julian Photography',
+          amount: process.env.DP_AMOUNT_AUD || '50',
+          currency: 'AUD',
+          whatsapp: process.env.WHATSAPP_JULIAN_SYDNEY || '',
+        }
+      : {
+          method: 'bank',
+          bankName: process.env.BANK_NAME_BALI || '',
+          accountNumber: process.env.ACCOUNT_NUMBER_BALI || '',
+          accountName: process.env.ACCOUNT_NAME_BALI || '',
+          amount: process.env.DP_AMOUNT_IDR || '500000',
+          currency: 'IDR',
+          whatsapp: process.env.WHATSAPP_JULIAN_BALI || '',
+        };
+
     return res.status(200).json({
       success: true,
       eventId: response.data.id,
       message: 'Booking created successfully!',
+      paymentConfig,
       payload: {
         nama: fullName,
         whatsapp,

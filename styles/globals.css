@@ -572,6 +572,153 @@ h1, h2, h3, h4, h5 {
   color: var(--text-dark);
 }
 
+/* Payment Section */
+.payment-card {
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  text-align: left;
+}
+
+.payment-card h2 {
+  text-align: center;
+}
+
+.payment-card .success-icon {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.payment-card .success-main-msg {
+  text-align: center;
+}
+
+.payment-section {
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+
+.payment-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--warm-brown-dark);
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.payment-details {
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--text-dark);
+}
+
+.payment-intro {
+  margin-bottom: 12px;
+  color: var(--text-dark) !important;
+  font-size: 0.88rem !important;
+}
+
+.payment-info-box {
+  background: var(--cream);
+  border: 1.5px solid var(--cream-dark);
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 14px;
+}
+
+.payment-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.payment-row + .payment-row {
+  border-top: 1px solid var(--cream-dark);
+}
+
+.payment-label {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.payment-value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.payment-value.mono {
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  letter-spacing: 0.04em;
+}
+
+.payment-instruction {
+  font-size: 0.84rem !important;
+  color: var(--text-muted) !important;
+  line-height: 1.6;
+  margin-bottom: 0 !important;
+}
+
+.payment-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.btn-whatsapp {
+  width: 100%;
+  padding: 14px 24px;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--white);
+  background: linear-gradient(135deg, #5D8A4E 0%, #4A7340 100%);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  letter-spacing: 0.02em;
+}
+
+.btn-whatsapp:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(74, 115, 64, 0.3);
+}
+
+.btn-whatsapp:active {
+  transform: translateY(0);
+}
+
+.btn-small {
+  font-size: 0.82rem;
+  padding: 10px 24px;
+}
+
+.pending-icon {
+  background: #FFF8E7 !important;
+  color: #B8860B;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+
+.status-badge.pending {
+  background: #FFF8E7;
+  color: #B8860B;
+  border: 1px solid rgba(184, 134, 11, 0.2);
+}
+
 .btn-outline {
   padding: 12px 32px;
   font-family: 'Inter', sans-serif;
