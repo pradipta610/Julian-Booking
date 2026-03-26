@@ -41,7 +41,7 @@ export default async function handler(req, res) {
   // Use timezone-aware date string for Google Calendar
   // Google Calendar accepts dateTime + timeZone and handles conversion
   const startDateTime = `${sessionDate}T${sessionTime}:00`;
-  const endHour = parseInt(sessionTime.split(':')[0], 10) + 2;
+  const endHour = parseInt(sessionTime.split(':')[0], 10) + 1;
   const endTime = `${String(endHour).padStart(2, '0')}:${sessionTime.split(':')[1]}`;
   const endDateTime = `${sessionDate}T${endTime}:00`;
 

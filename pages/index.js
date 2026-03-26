@@ -351,7 +351,7 @@ export default function BookingPage() {
               <div className="form-group">
                 <label className="form-label">
                   Available Times <span className="required">*</span>
-                  <span className="slot-duration-hint">(2-hour session)</span>
+                  <span className="slot-duration-hint">(1-hour session)</span>
                 </label>
 
                 {slotsLoading && (
