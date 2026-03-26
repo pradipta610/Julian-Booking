@@ -46,7 +46,7 @@ export default async function handler(req, res) {
   const endDateTime = `${sessionDate}T${endTime}:00`;
 
   const event = {
-    summary: `${sessionType} - ${fullName}`,
+    summary: `[UNCONFIRMED] ${sessionType} - ${fullName}`,
     description: [
       `Client: ${fullName}`,
       `WhatsApp: ${whatsapp}`,
