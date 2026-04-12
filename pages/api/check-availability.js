@@ -71,17 +71,34 @@ export default async function handler(req, res) {
 
     const events = eventsResponse.data.items || [];
 
-    // Collect busy periods from confirmed events only (ignore [UNCONFIRMED])
+    console.log(`[check-availability] date=${date} loc=${loc} tz=${tz} events_count=${events.length}`);
+
+    // Collect busy periods from confirmed events only
+    // Skip: [UNCONFIRMED] events, control events (Available/Unavailable)
     const busySlots = [];
     for (const event of events) {
       const title = (event.summary || '').trim();
-      if (title.startsWith('[UNCONFIRMED]')) continue;
 
+      // Skip unconfirmed bookings
+      if (title.startsWith('[UNCONFIRMED]')) {
+        console.log(`[check-availability] SKIP (unconfirmed): "${title}"`);
+        continue;
+      }
+
+      // Skip calendar control events (used by Sydney availability logic)
+      if (/^unavailable$/i.test(title) || /^available\s+\d{1,2}:00\s*-\s*\d{1,2}:00$/i.test(title)) {
+        console.log(`[check-availability] SKIP (control): "${title}"`);
+        continue;
+      }
+
+      // Only count timed events (skip all-day events)
       if (event.start?.dateTime && event.end?.dateTime) {
-        busySlots.push({
-          start: new Date(event.start.dateTime).getTime(),
-          end: new Date(event.end.dateTime).getTime(),
-        });
+        const startMs = new Date(event.start.dateTime).getTime();
+        const endMs = new Date(event.end.dateTime).getTime();
+        console.log(`[check-availability] BUSY: "${title}" ${event.start.dateTime} → ${event.end.dateTime}`);
+        busySlots.push({ start: startMs, end: endMs });
+      } else {
+        console.log(`[check-availability] SKIP (all-day/no-time): "${title}"`);
       }
     }
 
@@ -95,6 +112,8 @@ export default async function handler(req, res) {
       const isBusy = busySlots.some(
         (busy) => slotStartMs < busy.end && slotEndMs > busy.start
       );
+
+      console.log(`[check-availability] slot ${slotTime} → ${isBusy ? 'BUSY' : 'FREE'} (utc: ${new Date(slotStartMs).toISOString()})`);
 
       if (!isBusy) {
         availableSlots.push(slotTime);
