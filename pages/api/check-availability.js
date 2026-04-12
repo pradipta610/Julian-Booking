@@ -46,9 +46,8 @@ export default async function handler(req, res) {
   }
 
   const tz = TIMEZONE_MAP[loc];
-  const calendarId = loc === 'sydney'
-    ? process.env.GOOGLE_CALENDAR_ID_SYDNEY
-    : process.env.GOOGLE_CALENDAR_ID_BALI;
+  const calendarId = process.env.GOOGLE_CALENDAR_ID_MAIN
+    || (loc === 'sydney' ? process.env.GOOGLE_CALENDAR_ID_SYDNEY : process.env.GOOGLE_CALENDAR_ID_BALI);
 
   if (!calendarId) {
     return res.status(500).json({ available: false, slots: [], message: 'Calendar not configured for this location.' });
