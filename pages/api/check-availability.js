@@ -34,13 +34,13 @@ export default async function handler(req, res) {
     return res.status(405).json({ available: false, slots: [], message: 'Method not allowed' });
   }
 
-  const { date, location } = req.query;
+  const { date } = req.query;
+  const loc = (req.query.location || 'bali').toLowerCase();
 
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return res.status(400).json({ available: false, slots: [], message: 'Invalid or missing date. Use YYYY-MM-DD format.' });
   }
 
-  const loc = (location || '').toLowerCase();
   if (!['bali', 'sydney'].includes(loc)) {
     return res.status(400).json({ available: false, slots: [], message: 'Invalid location. Use "bali" or "sydney".' });
   }
